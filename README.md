@@ -24,9 +24,9 @@ One could use this code to expand the work done here to analyze House Session tr
 * One Minute Congresional Speech Data
       * cleaned_transcript_data_115th.csv, cleaned_transcript_data_116th.csv, cleaned_transcript_data_117th.csv resulting output from cleaning pipeline above. 
 * open ai code
-     * openapi_getVACES_115.ipynb, code which scores one-minute speeches using 
+     * openapi_getVACES_115.ipynb, code which scores one-minute speeches using gpt-3.5-turbo
 * VACES output
-     * Contains collected one-minute speeches for 115th, 116th and 117th Congresses as well as their Valence, Arousal, Confidence, Empathy and Sympathy which was scored using OpenAI                      gpt-3.5-turbo in openapi_getVACES_115.ipynb
+     * Contains collected one-minute speeches for 115th, 116th and 117th Congresses as well as their Valence, Arousal, Confidence, Empathy and Sympathy which was scored using OpenAI gpt-3.5-turbo in openapi_getVACES_115.ipynb
 * figure and ks code
     * kde figures and ks testing
          * ks-testing VAC_115.ipynb, ks testing for 115th Congress and figure generation
@@ -51,15 +51,71 @@ figure and ks code/sentiment figures/cleaning_and_sentiment_scoring_117.ipynb
 
 ## VACES Analysis Replication
 
+### scraping data
+The data was scraped from the C-SPAN website, using selenium. 
 
+To capture the transcript you'll need a C-SPAN account (free to make). Then navigate to their API page and use the GET \mentions feature. 
 
+Then appropriate min date, max date, search term ("one minute speeches" for my use case), as well as session type= 25 (House sessions). This will output a json with links to all videos which mention the search term in the given range. See *scrape 117th one minute speeches.ipynb* for code to capture these links and the corresponding transcripts. 
 
-## Help
+One you have the transcraipts from here, for me, the next step was to isolate the one-minute speeches data, see *clean_transcript_data_115.ipynb* for example. 
 
-Any advise for common problems or issues.
+The resulting, cleaned, one minute speech data can be found 
+
+* cleaned_transcript_data_115th.csv
+* cleaned_transcript_data_116th.csv
+* cleaned_transcript_data_117th.csv
+
+### using open ai to score data 
+
+From here, will score one-minute speeches using gpt-3.5-turbo, see openapi_getVACES_115.ipynb for full example. 
+
+Most notably, you will need your own API key to be able to replicate this analysis. 
+
+Essentially, need to pass it the text you want to score, the definition of the emotion dimention, as well as the dimensions name. 
+
 ```
-command to run if program contains helper info
+def label_text_using_gpt(text, defn, name):
+    chat_completion = client.chat.completions.create(
+        messages=[
+        {
+            "role": "system", "content": "You are a helpful assistant for labelling text data."
+        }, {
+            "role": "user", "content": f"The following is part of a congressional speech. Given this definition of '{name}': '{defn}' and this text: '{text}', provide a score for the '{name}' of the text between -1 and 1. Please give me ONLY a number between -1 and 1 as your response."
+         }
+        ],
+        model="gpt-3.5-turbo",
+        )
+    return chat_completion.choices[0].message.content
 ```
+
+Example input: 
+
+```
+valence= "the degree of pleasure/positivity i.e. valence is the positive--negative or pleasure--displeasure dimension, where high valence (1) indicates the content of text is all positive or pleasurable and low valence (-1) indicates the content of the text is not positive or pleasurable" 
+
+text_ex = "My name is Cara Nix, I like ice cream and cookies and Taylor Swift" 
+
+result= safe_label_text_using_gpt_v2(text_ex, valence, "valence")
+```
+
+The result is then a score for the valence of the text! 
+
+The scores for valence, arousal, confidence, empathy, and sympathy for the one-minute speeches for the 115-117th Congresses is availible *VACES output/speeches_VACES_115.csv*, *VACES output/speeches_VAC_116.csv*, *VACES output/speeches_ES_116.csv*, and *VACES output/speeches_VACES_117.csv* 
+
+
+### analyzing results 
+
+After passing in all the one-minute speeches and getting scores for valence, arousal, confidence, empathy, and sympathy for 115-117th Congresses it is now time to analyze these scores.
+
+path to folder: figure and ks code/kde figures and ks testing
+
+* ks-testing VAC_115.ipynb
+* ks-testing VAC_116.ipynb
+* ks-testing VAC_117.ipynb
+
+Then to combine these figures, use *make kde-figure-115-116-117.ipynb*. 
+
 
 ## Authors
 
@@ -69,10 +125,8 @@ ex. Cara Nix, nix.39@osu.edu
 
 ## Version History
 
-* 0.2
-    * Various bug fixes and optimizations
-    * See [commit change]() or See [release history]()
 * 0.1
+    * See [commit change]() or See [release history]()
     * Initial Release
 
 
